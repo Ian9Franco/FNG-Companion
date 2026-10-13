@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "FNG Companion",
+  "version": "0.0.0",
+  "description": "Registro local experimental de sesiones en Meta Ads y Google Ads.",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "storage",
+    "tabs",
+    "idle",
+    "alarms",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://adsmanager.facebook.com/*",
+    "https://business.facebook.com/*",
+    "https://ads.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "action": {
+    "default_title": "Abrir FNG Companion"
+  }
+}

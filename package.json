@@ -10,16 +10,17 @@
     "check": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.117.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",
+    "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "esbuild": "^0.25.0",
     "tsx": "^4.20.0",
-    "typescript": "^5.8.3",
-    "@types/node": "^22.15.0"
+    "typescript": "^5.8.3"
   }
 }

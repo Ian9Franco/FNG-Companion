@@ -1,4 +1,5 @@
 import { identifyAdsContext, initialState, STORAGE_KEY, type CompanionState, type OpenSession, type Session } from './domain'
+import { cloudLogin, cloudLogout, cloudOwner, uploadSessions } from './cloud'
 
 const HEARTBEAT = 'fng-companion-heartbeat'
 const IDLE_SECONDS = 120
@@ -30,10 +31,12 @@ async function focusedAccount(): Promise<{ tabId: number; context: NonNullable<R
 async function reconcile(reason: 'heartbeat' | 'navigation' | 'focus') {
   const state = await readState()
   const now = Date.now()
+  const owner = await cloudOwner()
   const focus = state.enabled ? await focusedAccount() : null
   const existing = state.open
   const same = Boolean(existing && focus && existing.tabId === focus.tabId &&
     existing.platform === focus.context.platform &&
+    (existing.ownerUserId ?? null) === owner &&
     existing.accountCandidate === focus.context.accountCandidate)
 
   if (existing) {
@@ -59,6 +62,7 @@ async function reconcile(reason: 'heartbeat' | 'navigation' | 'focus') {
     const startedAt = new Date(now).toISOString()
     const next: OpenSession = {
       id: crypto.randomUUID(), tabId: focus.tabId,
+      ownerUserId: owner,
       platform: focus.context.platform, accountCandidate: focus.context.accountCandidate,
       candidateSource: focus.context.candidateSource, startedAt, lastTickAt: startedAt,
       focusedMs: 0, navigationSignals: 1,
@@ -69,7 +73,7 @@ async function reconcile(reason: 'heartbeat' | 'navigation' | 'focus') {
 }
 
 function enqueue(reason: 'heartbeat' | 'navigation' | 'focus') {
-  queue = queue.then(() => reconcile(reason)).catch(err => console.error('[FNG Companion]', err))
+  queue = queue.then(async () => { await reconcile(reason); if (reason === 'heartbeat' || reason === 'focus') await uploadSessions((await readState()).sessions) }).catch(err => console.error('[FNG Companion]', err))
 }
 
 async function setup() {
@@ -93,6 +97,14 @@ void chrome.alarms.get(HEARTBEAT).then(alarm => { if (!alarm) void setup() })
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   if (!message || typeof message !== 'object' || !('type' in message)) return
+  if (message.type === 'FNG_CLOUD_LOGIN' || message.type === 'FNG_CLOUD_LOGOUT') {
+    queue = queue.then(async () => {
+      if (message.type === 'FNG_CLOUD_LOGIN' && 'email' in message && 'password' in message && typeof message.email === 'string' && typeof message.password === 'string') { await cloudLogin(message.email, message.password); await reconcile('focus'); await uploadSessions((await readState()).sessions) }
+      else if (message.type === 'FNG_CLOUD_LOGOUT') await cloudLogout()
+      else throw new Error('Credenciales inválidas')
+    }).then(() => sendResponse({ ok: true })).catch(error => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }))
+    return true
+  }
   if (message.type !== 'FNG_SET_ENABLED' && message.type !== 'FNG_DISMISS_SESSION') return
   queue = queue.then(async () => {
     const state = await readState()

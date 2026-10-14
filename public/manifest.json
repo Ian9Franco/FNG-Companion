@@ -14,7 +14,8 @@
   "host_permissions": [
     "https://adsmanager.facebook.com/*",
     "https://business.facebook.com/*",
-    "https://ads.google.com/*"
+    "https://ads.google.com/*",
+    "https://zxhxerhksohymmyofvqb.supabase.co/*"
   ],
   "background": {
     "service_worker": "background.js"

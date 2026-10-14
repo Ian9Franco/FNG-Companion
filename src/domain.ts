@@ -5,6 +5,7 @@ export type AccountContext = {
   candidateSource: string | null
 }
 export type Session = {
+  ownerUserId?: string | null
   id: string
   platform: Platform
   accountCandidate: string | null

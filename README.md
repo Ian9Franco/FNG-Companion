@@ -80,3 +80,11 @@ El intercambio futuro debe utilizar autenticación validada, idempotencia por `s
 ## Convenciones
 
 No registrar actividad de dominios ajenos a Ads Manager/Google Ads. Evitar inspección DOM y scraping automático sin revisión legal/técnica. Mantener los cambios de producto en el backlog y las releases en etiquetas, empezando por `v0.1.0` **solo cuando** pueda probarse el MVP del panel en Chrome real.
+
+## Sincronización autenticada con Informes FNG
+
+El panel permite conectar Supabase con el mismo correo y contraseña de la web. Se envían lotes de hasta 50 sesiones finalizadas, con deduplicación por ID y reintentos progresivos. Las sesiones se asocian al usuario que las capturó para no reenviarlas a otro login. No se envían URLs, cookies ni acciones de campaña inferidas.
+
+Si la web usa magic link, definir una contraseña desde **Clientes → Conectar Companion**. Después de actualizar el código ejecutar `npm install`, `npm run build` y recargar `dist` en Chrome. El nuevo permiso de host es exclusivamente el proyecto Supabase de Informes FNG.
+
+Las sesiones aparecen como evidencia en la jornada compartida; sólo guardar una revisión explícita completa el contador. Los avisos push siguen siendo una fase posterior.

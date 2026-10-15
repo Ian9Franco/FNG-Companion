@@ -1,5 +1,5 @@
 import { identifyAdsContext, initialState, STORAGE_KEY, type CompanionState, type OpenSession, type Session } from './domain'
-import { cloudLogin, cloudLogout, cloudOwner, uploadSessions } from './cloud'
+import { cloudCatalog, cloudLogin, cloudLogout, cloudOwner, uploadSessions } from './cloud'
 
 const HEARTBEAT = 'fng-companion-heartbeat'
 const IDLE_SECONDS = 120
@@ -24,7 +24,8 @@ async function focusedAccount(): Promise<{ tabId: number; context: NonNullable<R
   const tabs = await chrome.tabs.query({ active: true, windowId: window.id })
   const tab = tabs[0]
   if (!tab?.id || !tab.url) return null
-  const context = identifyAdsContext(tab.url)
+  if(!identifyAdsContext(tab.url))return null
+  const context = identifyAdsContext(tab.url,await cloudCatalog())
   return context ? { tabId: tab.id, context } : null
 }
 
@@ -34,10 +35,12 @@ async function reconcile(reason: 'heartbeat' | 'navigation' | 'focus') {
   const owner = await cloudOwner()
   const focus = state.enabled ? await focusedAccount() : null
   const existing = state.open
+  if (!existing && !focus) return // No storage writes for unrelated browsing or paused tracking.
   const same = Boolean(existing && focus && existing.tabId === focus.tabId &&
     existing.platform === focus.context.platform &&
     (existing.ownerUserId ?? null) === owner &&
-    existing.accountCandidate === focus.context.accountCandidate)
+    existing.accountCandidate === focus.context.accountCandidate &&
+    (existing.accountCandidate !== null || reason !== 'navigation'))
 
   if (existing) {
     // Conservative time estimate: only short, periodically observed foreground intervals.
@@ -84,8 +87,8 @@ async function setup() {
 chrome.runtime.onInstalled.addListener(() => { void setup() })
 chrome.runtime.onStartup.addListener(() => { void setup() })
 chrome.tabs.onActivated.addListener(() => enqueue('focus'))
-chrome.tabs.onUpdated.addListener((_tabId, changeInfo) => {
-  if (changeInfo.url) enqueue('navigation')
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  if (tab.active && changeInfo.url) enqueue('navigation')
 })
 chrome.tabs.onRemoved.addListener(() => enqueue('focus'))
 chrome.windows.onFocusChanged.addListener(() => enqueue('focus'))
@@ -97,10 +100,11 @@ void chrome.alarms.get(HEARTBEAT).then(alarm => { if (!alarm) void setup() })
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   if (!message || typeof message !== 'object' || !('type' in message)) return
-  if (message.type === 'FNG_CLOUD_LOGIN' || message.type === 'FNG_CLOUD_LOGOUT') {
+  if (message.type === 'FNG_CLOUD_LOGIN' || message.type === 'FNG_CLOUD_LOGOUT' || message.type === 'FNG_CATALOG_REFRESH') {
     queue = queue.then(async () => {
       if (message.type === 'FNG_CLOUD_LOGIN' && 'email' in message && 'password' in message && typeof message.email === 'string' && typeof message.password === 'string') { await cloudLogin(message.email, message.password); await reconcile('focus'); await uploadSessions((await readState()).sessions) }
       else if (message.type === 'FNG_CLOUD_LOGOUT') await cloudLogout()
+      else if (message.type === 'FNG_CATALOG_REFRESH') { await cloudCatalog(true); await reconcile('focus') }
       else throw new Error('Credenciales inválidas')
     }).then(() => sendResponse({ ok: true })).catch(error => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }))
     return true

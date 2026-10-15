@@ -1,0 +1,3 @@
+import type { Catalog } from '../src/catalog'
+// Deliberately fictional IDs; production configuration exists only in the user's database.
+export const catalog: Catalog={version:1,accounts:[{platform:'meta_ads',accountId:'900000000000001',clientId:'a',name:'Cliente de prueba',active:true},{platform:'google_ads',accountId:'9000000001',clientId:'a',name:'Cliente de prueba',active:true},{platform:'google_ads',accountId:'9000000002',clientId:'b',name:'Segundo cliente',active:true}],contexts:[{platform:'google_ads',kind:'google_context',key:'8000000001:8000000002',accountId:'9000000001'},{platform:'meta_ads',kind:'meta_page',key:'900000000000101',accountId:'900000000000001'}]}

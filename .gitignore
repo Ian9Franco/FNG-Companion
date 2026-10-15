@@ -1,5 +1,8 @@
 node_modules/
 dist/
+private-data/
+*.private.json
+informes-fng-*.json
 *.log
 .env
 .env.*

@@ -10,17 +10,19 @@ Chrome (pestaña activa)
      └─ background.ts -> chrome.storage.local
         └─ Panel lateral -> sesiones por documentar
 
-Etapa futura:
-  Companion -> autenticación/ingesta segura -> Supabase (RLS)
+Implementado:
+  Companion -> Auth/ingesta fng_ingest_activity -> Supabase (RLS)
   INFORMES FNG <- consulta sesiones y cruza con revisiones registradas
+
+Etapa futura:
   Scheduler -> reglas + dispositivos push -> notificaciones (opt-in)
 ```
 
 ## Detección sin API
 
 - **Meta Ads:** dominios de Ads Manager; `act` puede aportar un ID candidato numérico.
-- **Google Ads:** `ads.google.com` en rutas de aplicación; parámetros como `cid`, `customerId` o `__c` pueden aportar candidatos, **no identidades oficiales validadas**.
-- `ocid` no se interpreta automáticamente como ID de cliente.
+- **Google Ads:** `ads.google.com/aw` o `/nav`; sólo `cid`/`customerId` de 10 dígitos aportan candidatos. `__c`, `ocid` y `uscid` son contexto interno no vinculado automáticamente.
+- **Business Suite:** calendario/compositor no forman parte del detector actual; `asset_id` no equivale a `act` ni garantiza una publicación.
 - Siempre hay fallback «plataforma detectada, cuenta desconocida», que más adelante permitirá asignación manual.
 - No guardar URL íntegra ni contenido de navegación.
 - Si Meta/Google alteran sus rutas, los detectores pueden fallar. No depender de DOM profundo.
@@ -38,7 +40,7 @@ Precauciones: el estado idle tiene retardo, la suspensión de Chrome pierde tiem
 ## Seguridad futura
 
 - Autenticación explícita de la extensión. Nunca extraer el token de la sesión de la web mediante lectura de cookies/DOM.
-- Permisos mínimos. El permiso `tabs` permite acceso amplio a metadatos de pestañas y es una deuda de reducción de permisos.
+- Sin permiso general `tabs`: URLs restringidas por hosts declarados y rutas filtradas en el detector. Eventos globales de activación sólo permiten finalizar el trabajo anterior; no se persisten destinos ajenos.
 - Nada de APIs privadas, interceptación de tráfico o scraping no autorizado.
 - Ingesta con RLS y validación. La clave publicable de Supabase no reemplaza Auth.
 - Los datos de sesiones tendrán expiración/borrado y opción de exportación si pasan al servidor.

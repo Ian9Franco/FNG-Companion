@@ -48,3 +48,7 @@ Un cliente puede tener múltiples cuentas Meta Ads y Google Ads. La identidad ex
 - Nunca almacenar `service_role` ni secretos de servidor en la extensión.
 
 Ver [diseño de recordatorios](RECORDATORIOS.md).
+
+## Servicios de trabajo
+
+El proveedor de una cuenta continúa siendo `meta_ads` o `google_ads`. Las sesiones añaden `service`: `meta_ads` para Ads Manager, `google_ads` para Google Ads, `meta_organic` para el calendario/compositor Meta con contexto confirmado. Un cambio entre Ads y orgánico cierra la sesión anterior aunque la cuenta y la pestaña sean las mismas. El catálogo privado puede incluir los servicios activos por cuenta: acceso Meta orgánico no habilita atribución a Meta Ads. Los IDs permanecen sólo en la DB y en la caché privada autenticada. No se amplía la lista de sitios observados ni se infieren acciones realizadas.

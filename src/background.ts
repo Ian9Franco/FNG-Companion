@@ -38,6 +38,7 @@ async function reconcile(reason: 'heartbeat' | 'navigation' | 'focus') {
   if (!existing && !focus) return // No storage writes for unrelated browsing or paused tracking.
   const same = Boolean(existing && focus && existing.tabId === focus.tabId &&
     existing.platform === focus.context.platform &&
+    (existing.service ?? existing.platform) === (focus.context.service ?? focus.context.platform) &&
     (existing.ownerUserId ?? null) === owner &&
     existing.accountCandidate === focus.context.accountCandidate &&
     (existing.accountCandidate !== null || reason !== 'navigation'))
@@ -66,7 +67,7 @@ async function reconcile(reason: 'heartbeat' | 'navigation' | 'focus') {
     const next: OpenSession = {
       id: crypto.randomUUID(), tabId: focus.tabId,
       ownerUserId: owner,
-      platform: focus.context.platform, accountCandidate: focus.context.accountCandidate,
+      platform: focus.context.platform, service: focus.context.service ?? focus.context.platform, accountCandidate: focus.context.accountCandidate,
       candidateSource: focus.context.candidateSource, startedAt, lastTickAt: startedAt,
       focusedMs: 0, navigationSignals: 1,
     }

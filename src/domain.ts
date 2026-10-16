@@ -1,8 +1,10 @@
 import { contextBinding, contextSource, confirmedSessionSource, emptyCatalog, knownAccount, type Catalog } from './catalog'
+import type { WorkService } from './catalog'
 
 export type Platform = 'meta_ads' | 'google_ads'
 export type AccountContext = {
   platform: Platform
+  service?: WorkService
   accountCandidate: string | null
   candidateSource: string | null
 }
@@ -10,6 +12,7 @@ export type Session = {
   ownerUserId?: string | null
   id: string
   platform: Platform
+  service?: WorkService
   accountCandidate: string | null
   candidateSource: string | null
   startedAt: string
@@ -53,7 +56,7 @@ export function identifyAdsContext(rawUrl: string, catalog: Catalog = emptyCatal
     const binding = contextBinding(catalog,'meta_ads',url.searchParams)
     const act = url.searchParams.get('act')
     const conflict = url.searchParams.has('act') && (url.searchParams.getAll('act').length !== 1 || act !== binding?.accountId)
-    return { platform: 'meta_ads', accountCandidate: binding && !conflict ? binding.accountId : null, candidateSource: binding && !conflict ? contextSource(binding) : null }
+    return { platform: 'meta_ads', service: 'meta_organic', accountCandidate: binding && !conflict ? binding.accountId : null, candidateSource: binding && !conflict ? contextSource(binding) : null }
   }
   if (host === 'ads.google.com' && /^\/(?:aw|nav)(?:\/|$)/.test(url.pathname)) {
     const binding = contextBinding(catalog,'google_ads',url.searchParams)
@@ -77,8 +80,9 @@ export const formatMinutes = (ms: number) => Math.max(0, Math.floor(ms / 60000))
 
 /** Explicit upload allowlist, including old local sessions captured before stricter URL rules. */
 export function sessionEvent(session: Session, catalog: Catalog = emptyCatalog) {
-  const candidate = !knownAccount(catalog,session.platform,session.accountCandidate) ? null : confirmedSessionSource(catalog,session.platform, session.accountCandidate, session.candidateSource) ? session.accountCandidate : session.platform === 'google_ads'
+  const service = session.platform==='meta_ads' && (session.service==='meta_organic'||session.candidateSource?.startsWith('context:meta_page:')) ? 'meta_organic' : session.platform
+  const candidate = !knownAccount(catalog,session.platform,session.accountCandidate,service) ? null : confirmedSessionSource(catalog,session.platform, session.accountCandidate, session.candidateSource) ? session.accountCandidate : session.platform === 'google_ads'
     ? ['customerId', 'cid'].includes(session.candidateSource ?? '') && /^\d{10}$/.test(session.accountCandidate ?? '') ? session.accountCandidate : null
     : session.candidateSource === 'act' && /^\d{5,20}$/.test(session.accountCandidate ?? '') ? session.accountCandidate : null
-  return { id: session.id, platform: session.platform, accountCandidate: candidate, startedAt: session.startedAt, endedAt: session.endedAt, focusedMs: session.focusedMs, navigationSignals: session.navigationSignals }
+  return { id: session.id, platform: session.platform, service, accountCandidate: candidate, startedAt: session.startedAt, endedAt: session.endedAt, focusedMs: session.focusedMs, navigationSignals: session.navigationSignals }
 }
